@@ -10,9 +10,7 @@ services:
         sync: false
       - key: SLACK_SIGNING_SECRET
         sync: false
-      - key: API_BASE_URL
-        sync: false
-      - key: API_KEY
+      - key: SLACK_DEFAULT_CHANNEL
         sync: false
       - key: PORT
         value: 3000

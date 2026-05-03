@@ -1,31 +1,72 @@
 # Slack Bot
 
-A Slack bot built with TypeScript and [@slack/bolt](https://slack.dev/bolt-js/) that interacts with a custom API. Mention the bot or DM it to send API requests and get responses directly in Slack.
+A Slack bot built with TypeScript and [@slack/bolt](https://slack.dev/bolt-js/) that exposes an HTTP API to read and write messages in Slack channels. Use it as a bridge between your external services and Slack conversations.
 
 ## Features
 
-- **Mention or DM** the bot to interact with it
-- **Call any API endpoint** via `GET` or `POST` from Slack
-- **Configurable API** — point it at any REST API with optional auth
+- **GET /api/messages** — Fetch the full conversation history from a Slack channel
+- **POST /api/messages** — Send a message to a Slack channel
+- **@mention / DM** the bot in Slack for help
 - **Socket Mode** support for local development (no public URL needed)
 - **HTTP Mode** for production deployment on Render (free tier, sleeps when idle)
 
-## Commands
+## API Routes
 
-| Command | Description |
-|---|---|
-| `@bot ping` | Check if the bot is alive |
-| `@bot help` | Show available commands |
-| `@bot api get <path>` | Send a GET request to the configured API |
-| `@bot api post <path> <json>` | Send a POST request with a JSON body |
+### `GET /api/messages`
 
-### Examples
+Fetch conversation history from a Slack channel.
 
+**Query parameters:**
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `channel` | Yes* | `SLACK_DEFAULT_CHANNEL` env var | Slack channel ID |
+| `limit` | No | `100` | Max number of messages to return |
+
+**Example:**
+```bash
+curl "http://localhost:3000/api/messages?channel=C0123ABCDEF"
 ```
-@bot ping
-@bot api get /users/1
-@bot api post /posts {"title":"Hello","body":"World"}
+
+**Response:**
+```json
+{
+  "ok": true,
+  "channel": "C0123ABCDEF",
+  "messages": [
+    { "user": "U0123", "text": "Hello!", "ts": "1234567890.123456" }
+  ]
+}
 ```
+
+### `POST /api/messages`
+
+Send a message to a Slack channel.
+
+**Request body (JSON):**
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `channel` | Yes* | `SLACK_DEFAULT_CHANNEL` env var | Slack channel ID |
+| `text` | Yes | — | Message text to send |
+| `thread_ts` | No | — | Thread timestamp to reply in a thread |
+
+**Example:**
+```bash
+curl -X POST "http://localhost:3000/api/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"channel": "C0123ABCDEF", "text": "Hello from the API!"}'
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "channel": "C0123ABCDEF",
+  "ts": "1234567890.654321",
+  "message": { ... }
+}
+```
+
+> *If you set `SLACK_DEFAULT_CHANNEL` in your environment, you can omit the `channel` parameter in both routes.
 
 ## Setup
 
@@ -38,6 +79,7 @@ A Slack bot built with TypeScript and [@slack/bolt](https://slack.dev/bolt-js/) 
 
 1. Go to **OAuth & Permissions** → **Scopes** → **Bot Token Scopes** and add:
    - `app_mentions:read`
+   - `channels:history`
    - `chat:write`
    - `im:history`
    - `im:read`
@@ -54,6 +96,8 @@ A Slack bot built with TypeScript and [@slack/bolt](https://slack.dev/bolt-js/) 
 4. Go to **App Home** → toggle **Allow users to send Slash commands and messages from the messages tab**
 
 5. Install the app to your workspace (**Install App** in the sidebar)
+
+6. **Invite the bot** to the channel(s) you want it to read: `/invite @YourBotName`
 
 ### 3. Get Your Tokens
 
@@ -72,7 +116,7 @@ Edit `.env` with your tokens:
 ```env
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_SIGNING_SECRET=your-signing-secret
-API_BASE_URL=https://your-api.com
+SLACK_DEFAULT_CHANNEL=C0123ABCDEF
 ```
 
 For Socket Mode (local dev), also add:
@@ -89,10 +133,22 @@ npm run build
 npm start
 ```
 
-Or for development with auto-reload:
+Or for development:
 
 ```bash
 npm run dev
+```
+
+Then test the API:
+
+```bash
+# Fetch messages
+curl "http://localhost:3000/api/messages?channel=C0123ABCDEF"
+
+# Send a message
+curl -X POST "http://localhost:3000/api/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"channel": "C0123ABCDEF", "text": "Hello!"}'
 ```
 
 ## Deploy to Render (Free)
@@ -105,7 +161,7 @@ npm run dev
 6. Deploy — your bot URL will be `https://slack-bot-xxxx.onrender.com`
 7. Set the Slack **Request URL** to `https://slack-bot-xxxx.onrender.com/slack/events`
 
-> **Note**: Render's free tier sleeps after 15 minutes of inactivity. The first request after sleep takes ~30 seconds to wake up. This is fine for a Slack bot since Slack retries events.
+> **Note**: Render's free tier sleeps after 15 minutes of inactivity. The first request after sleep takes ~30 seconds to wake up. Slack retries events automatically, so this works fine.
 
 ## Deploy with Docker
 
@@ -118,9 +174,8 @@ docker run -p 3000:3000 --env-file .env slack-bot
 
 ```
 src/
-├── index.ts        # Entry point
-├── app.ts          # Slack Bolt app setup and event handlers
-├── commands.ts     # Command parsing and execution
-├── config.ts       # Environment variable configuration
-└── api-client.ts   # HTTP client for the custom API
+├── index.ts     # Entry point
+├── app.ts       # Slack Bolt app setup, event handlers, mounts API routes
+├── routes.ts    # Express routes: GET /api/messages, POST /api/messages
+└── config.ts    # Environment variable configuration
 ```
