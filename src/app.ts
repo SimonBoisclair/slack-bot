@@ -1,21 +1,23 @@
-import { App, LogLevel } from "@slack/bolt";
+import { App, ExpressReceiver, LogLevel } from "@slack/bolt";
 import { config } from "./config";
 import { router } from "./routes";
 
 const useSocketMode = Boolean(config.slack.appToken);
 
-const app = new App({
-  token: config.slack.botToken,
+const expressReceiver = new ExpressReceiver({
   signingSecret: config.slack.signingSecret,
-  ...(useSocketMode
-    ? { socketMode: true, appToken: config.slack.appToken }
-    : {}),
-  logLevel: LogLevel.INFO,
 });
 
-// Register custom API routes on the underlying Express receiver
-const expressApp = (app as unknown as { receiver: { app: import("express").Express } }).receiver.app;
-expressApp.use(router);
+// Mount custom API routes on the receiver's Express app
+expressReceiver.app.use(router);
+
+const app = new App({
+  token: config.slack.botToken,
+  logLevel: LogLevel.INFO,
+  ...(useSocketMode
+    ? { socketMode: true, appToken: config.slack.appToken, receiver: undefined }
+    : { receiver: expressReceiver }),
+});
 
 // Respond to @mentions with a help message
 app.event("app_mention", async ({ event, say }) => {

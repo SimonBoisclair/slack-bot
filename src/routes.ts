@@ -1,9 +1,11 @@
-import { Request, Response, Router } from "express";
+import express, { Request, Response, Router } from "express";
 import { WebClient } from "@slack/web-api";
 import { config } from "./config";
 
 const slackClient = new WebClient(config.slack.botToken);
 const router = Router();
+
+router.use(express.json());
 
 router.get("/api/messages", async (req: Request, res: Response) => {
   const channel = (req.query.channel as string) || config.slack.defaultChannel;
