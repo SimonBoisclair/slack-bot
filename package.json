@@ -8,7 +8,11 @@
     "dev": "ts-node src/index.ts",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["slack", "bot", "api"],
+  "keywords": [
+    "slack",
+    "bot",
+    "api"
+  ],
   "author": "SimonBoisclair",
   "license": "ISC",
   "description": "A Slack bot that interacts with a custom API",
@@ -18,6 +22,7 @@
     "dotenv": "^17.4.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
