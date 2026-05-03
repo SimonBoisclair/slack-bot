@@ -1,0 +1,25 @@
+{
+  "name": "slack-bot",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["slack", "bot", "api"],
+  "author": "SimonBoisclair",
+  "license": "ISC",
+  "description": "A Slack bot that interacts with a custom API",
+  "dependencies": {
+    "@slack/bolt": "^4.7.2",
+    "axios": "^1.16.0",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}

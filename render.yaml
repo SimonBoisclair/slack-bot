@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: slack-bot
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+      - key: API_KEY
+        sync: false
+      - key: PORT
+        value: 3000
