@@ -70,4 +70,40 @@ router.post("/api/messages", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/api/threads", async (req: Request, res: Response) => {
+  const channel = (req.query.channel as string) || config.slack.defaultChannel;
+  const threadTs = req.query.thread_ts as string;
+
+  if (!channel) {
+    res.status(400).json({ error: "Missing 'channel' query parameter." });
+    return;
+  }
+
+  if (!threadTs) {
+    res.status(400).json({ error: "Missing 'thread_ts' query parameter." });
+    return;
+  }
+
+  try {
+    const result = await slackClient.conversations.replies({
+      channel,
+      ts: threadTs,
+      limit: Number(req.query.limit) || 100,
+    });
+
+    const messages = (result.messages ?? []).map((msg) => ({
+      user: msg.user ?? msg.bot_id ?? "unknown",
+      text: msg.text ?? "",
+      ts: msg.ts,
+      thread_ts: msg.thread_ts,
+    }));
+
+    res.json({ ok: true, channel, thread_ts: threadTs, messages });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Failed to fetch thread:", msg);
+    res.status(500).json({ ok: false, error: msg });
+  }
+});
+
 export { router };
