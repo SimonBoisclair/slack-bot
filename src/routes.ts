@@ -21,12 +21,36 @@ router.get("/api/messages", async (req: Request, res: Response) => {
       limit: Number(req.query.limit) || 100,
     });
 
-    const messages = (result.messages ?? []).map((msg) => ({
-      user: msg.user ?? msg.bot_id ?? "unknown",
-      text: msg.text ?? "",
-      ts: msg.ts,
-      thread_ts: msg.thread_ts,
-    }));
+    const rawMessages = result.messages ?? [];
+
+    const messages = await Promise.all(
+      rawMessages.map(async (msg) => {
+        const base = {
+          user: msg.user ?? msg.bot_id ?? "unknown",
+          text: msg.text ?? "",
+          ts: msg.ts,
+        };
+
+        if (msg.thread_ts && msg.thread_ts === msg.ts && msg.reply_count && msg.reply_count > 0) {
+          const threadResult = await slackClient.conversations.replies({
+            channel,
+            ts: msg.thread_ts,
+          });
+
+          const replies = (threadResult.messages ?? [])
+            .filter((reply) => reply.ts !== msg.ts)
+            .map((reply) => ({
+              user: reply.user ?? reply.bot_id ?? "unknown",
+              text: reply.text ?? "",
+              ts: reply.ts,
+            }));
+
+          return { ...base, replies };
+        }
+
+        return { ...base, replies: [] };
+      })
+    );
 
     res.json({ ok: true, channel, messages });
   } catch (error: unknown) {
